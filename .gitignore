@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.idea
+/alexnet/data/alexnet-owt-4df8aa71.pth
