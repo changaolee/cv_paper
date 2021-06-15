@@ -130,3 +130,4 @@ dmypy.json
 
 .idea
 /alexnet/data/alexnet-owt-4df8aa71.pth
+/alexnet/results/
