@@ -43,12 +43,14 @@ if __name__ == '__main__':
     # load model
     alexnet_model = get_model(path_state_dict, False)
 
+    layer_idx = 0
     vis_max_num = 1  # 配置可视化层的数量
-    for i, sub_module in enumerate(alexnet_model.modules()):
+    for sub_module in alexnet_model.modules():
         # 过滤非卷积层
         if not isinstance(sub_module, nn.Conv2d):
             continue
-        if i >= vis_max_num:
+        layer_idx += 1
+        if layer_idx > vis_max_num:
             break
 
         kernels = sub_module.weight
@@ -57,16 +59,16 @@ if __name__ == '__main__':
         # 拆分 channel
         for o_idx in range(c_out):
             # 获得 (3, h, w), 但是 make_grid 需要 b,c,h,w，这里拓展 c 维度变为(3, 1, h, w)
-            kernel_idx = kernels[o_idx, :, :, :].unsqueeze(1)
-            kernel_grid = vutils.make_grid(kernel_idx, normalize=True, scale_each=True, nrow=c_in)
-            writer.add_image('{}_conv_layer_split_in_channel'.format(i), kernel_grid, global_step=o_idx)
+            kernel = kernels[o_idx, :, :, :].unsqueeze(1)
+            kernel_grid = vutils.make_grid(kernel, normalize=True, scale_each=True, nrow=c_in)
+            writer.add_image('{}_conv_layer_split_in_channel'.format(layer_idx), kernel_grid, global_step=o_idx)
 
         kernel_all = kernels.view(-1, 3, k_h, k_w)
         kernel_grid = vutils.make_grid(kernel_all, normalize=True, scale_each=True, nrow=8)
-        writer.add_image('{}_all'.format(i), kernel_grid, global_step=620)
+        writer.add_image('{}_all'.format(layer_idx), kernel_grid, global_step=620)
         writer.close()
 
-        print("{}_conv_layer shape:{}".format(i, tuple(kernels.shape)))
+        print("{}_conv_layer shape:{}".format(layer_idx, tuple(kernels.shape)))
 
     # -------------------------- 特征图可视化 ----------------------------
     writer = SummaryWriter(log_dir=log_dir, filename_suffix="_feature_map")
