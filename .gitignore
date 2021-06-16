@@ -129,5 +129,9 @@ dmypy.json
 .pyre/
 
 .idea
+
+# alexnet
 /alexnet/data/alexnet-owt-4df8aa71.pth
 /alexnet/results/
+/alexnet/data/test/
+/alexnet/data/train/
