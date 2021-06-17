@@ -33,6 +33,12 @@ def get_model(path_state_dict, vis_model=False):
     return model
 
 
+def ten_crop_transform(crops):
+    normalize = transforms.Normalize(norm_mean, norm_std)
+    to_tensor = transforms.ToTensor()
+    return torch.stack([normalize(to_tensor(crop)) for crop in crops])
+
+
 if __name__ == '__main__':
     # config
     path_state_dict = os.path.join(BASE_DIR, "..", "data", "alexnet-owt-4df8aa71.pth")
@@ -59,17 +65,10 @@ if __name__ == '__main__':
         transforms.Normalize(norm_mean, norm_std),
     ])
 
-
-    def __ten_crop_transform(_crops):
-        _normalize = transforms.Normalize(norm_mean, norm_std)
-        _to_tensor = transforms.ToTensor()
-        return torch.stack([_normalize(_to_tensor(crop)) for crop in _crops])
-
-
     valid_transform = transforms.Compose([
         transforms.Resize((256, 256)),
         transforms.TenCrop(224, vertical_flip=False),
-        transforms.Lambda(lambda crops: __ten_crop_transform(crops)),
+        transforms.Lambda(lambda crops: ten_crop_transform(crops)),
     ])
 
     # 构建 Dataset 实例
@@ -95,7 +94,7 @@ if __name__ == '__main__':
     # ============================= step 4/5 优化器 ===============================
     flag = False  # 可自行修改，是否冻结卷积层
     if flag:
-        fc_params_id = list(map(id, alexnet_model.classifier.parameters()))  # 返回的是parameters的 内存地址
+        fc_params_id = list(map(id, alexnet_model.classifier.parameters()))  # 返回的是 FC 层参数的内存地址
         base_params = filter(lambda p: id(p) not in fc_params_id, alexnet_model.parameters())
         optimizer = optim.SGD([
             {'params': base_params, 'lr': LR * 0.1},
@@ -103,18 +102,20 @@ if __name__ == '__main__':
         ], lr=LR, momentum=0.9)
     else:
         optimizer = optim.SGD(alexnet_model.parameters(), lr=LR, momentum=0.9)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=LR_DECAY_STEP, gamma=0.1)  # 设置学习率下降策略
+
+    # 设置学习率下降策略
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=LR_DECAY_STEP, gamma=0.1)
 
     # ============================== step 5/5 训练 ================================
     train_curve = list()
     valid_curve = list()
 
     for epoch in range(start_epoch, MAX_EPOCH):
+
         # train the model
-        loss_mean = 0.
-        correct = 0.
-        total = 0.
+        correct, total = 0., 0.
         alexnet_model.train()
+
         for i, data in enumerate(train_loader):
             # forward
             inputs, labels = data
@@ -132,14 +133,12 @@ if __name__ == '__main__':
             # 统计分类情况
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
-            correct += (predicted == labels).squeeze().cpu().sum().numpy()
+            correct += torch.eq(predicted, labels).sum().numpy()
 
             # 打印训练信息
-            loss_mean += loss.item()
             train_curve.append(loss.item())
             print("Training:Epoch[{:0>3}/{:0>3}] Iteration[{:0>3}/{:0>3}] Loss: {:.4f} Acc:{:.2%}".format(
-                epoch, MAX_EPOCH, i + 1, len(train_loader), loss_mean, correct / total))
-            loss_mean = 0.
+                epoch, MAX_EPOCH, i + 1, len(train_loader), loss.item(), correct / total))
 
         scheduler.step()  # 更新学习率
 
