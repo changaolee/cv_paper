@@ -117,6 +117,7 @@ if __name__ == '__main__':
         alexnet_model.train()
 
         for i, data in enumerate(train_loader):
+            
             # forward
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
@@ -143,24 +144,23 @@ if __name__ == '__main__':
         scheduler.step()  # 更新学习率
 
         # validate the model
-        correct_val = 0.
-        total_val = 0.
-        loss_val = 0.
+        correct_val, total_val, loss_val = 0., 0., 0.
         alexnet_model.eval()
         with torch.no_grad():
             for j, data in enumerate(valid_loader):
                 inputs, labels = data
                 inputs, labels = inputs.to(device), labels.to(device)
 
-                bs, ncrops, c, h, w = inputs.size()  # [4, 10, 3, 224, 224]
+                # 由于验证集数据使用了 TenCrop，需要 view 转换成 b,c,h,w 才能输入模型
+                bs, n_crops, c, h, w = inputs.size()  # [4, 10, 3, 224, 224]
                 outputs = alexnet_model(inputs.view(-1, c, h, w))
-                outputs_avg = outputs.view(bs, ncrops, -1).mean(1)
+                outputs_avg = outputs.view(bs, n_crops, -1).mean(1)
 
                 loss = criterion(outputs_avg, labels)
 
                 _, predicted = torch.max(outputs_avg.data, 1)
                 total_val += labels.size(0)
-                correct_val += (predicted == labels).squeeze().cpu().sum().numpy()
+                correct_val += torch.eq(predicted, labels).sum().numpy()
 
                 loss_val += loss.item()
 
@@ -168,13 +168,13 @@ if __name__ == '__main__':
             valid_curve.append(loss_val_mean)
             print("Valid:\t Epoch[{:0>3}/{:0>3}] Iteration[{:0>3}/{:0>3}] Loss: {:.4f} Acc:{:.2%}".format(
                 epoch, MAX_EPOCH, j + 1, len(valid_loader), loss_val_mean, correct_val / total_val))
-        alexnet_model.train()
 
     train_x = range(len(train_curve))
     train_y = train_curve
 
     train_iter = len(train_loader)
-    valid_x = np.arange(1, len(valid_curve) + 1) * train_iter  # 由于 valid 中记录的是 epoch_loss，需要对记录点进行转换到 iterations
+    # 由于 valid 中记录的是 epoch_loss，需要对记录点进行转换到 iterations
+    valid_x = np.arange(1, len(valid_curve) + 1) * train_iter
     valid_y = valid_curve
 
     plt.plot(train_x, train_y, label='Train')
