@@ -110,5 +110,5 @@ if __name__ == '__main__':
     top5_num = top5_idx.cpu().numpy().squeeze()
     text_str = [cls_n[t] for t in top5_num]
     for idx in range(len(top5_num)):
-        plt.text(5, 15 + idx * 30, "top {}:{}".format(idx+1, text_str[idx]), bbox=dict(fc='yellow'))
+        plt.text(5, 15 + idx * 30, "top {}:{}".format(idx + 1, text_str[idx]), bbox=dict(fc='yellow'))
     plt.show()

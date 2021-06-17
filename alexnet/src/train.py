@@ -117,7 +117,6 @@ if __name__ == '__main__':
         alexnet_model.train()
 
         for i, data in enumerate(train_loader):
-            
             # forward
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
