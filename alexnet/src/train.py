@@ -42,11 +42,13 @@ def ten_crop_transform(crops):
 if __name__ == '__main__':
     # config
     path_state_dict = os.path.join(BASE_DIR, "..", "data", "alexnet-owt-4df8aa71.pth")
+    checkpoint_dir = os.path.join(BASE_DIR, "..", "checkpoint")
     data_dir = os.path.join(BASE_DIR, "..", "data", "train")
 
     num_classes = 2
     start_epoch = 0
 
+    CHECKPOINT_INTERVAL = 5  # 可自行修改
     MAX_EPOCH = 3  # 可自行修改
     BATCH_SIZE = 128  # 可自行修改
     LR = 0.001  # 可自行修改
@@ -141,6 +143,16 @@ if __name__ == '__main__':
                 epoch, MAX_EPOCH, i + 1, len(train_loader), loss.item(), correct / total))
 
         scheduler.step()  # 更新学习率
+
+        # 保存模型
+        if (epoch + 1) % CHECKPOINT_INTERVAL == 0:
+            checkpoint = {
+                'model_state_dict': alexnet_model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'epoch': epoch
+            }
+            path_checkpoint = os.path.join(checkpoint_dir, 'checkpoint_{}_epoch.pkl'.format(epoch))
+            torch.save(checkpoint, path_checkpoint)
 
         # validate the model
         correct_val, total_val, loss_val = 0., 0., 0.
